@@ -1,7 +1,6 @@
 from random import choice, random
 from time import time
 
-
 import hashlib
 
 
