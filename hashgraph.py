@@ -19,11 +19,9 @@ class Hashgraph:
         }
         if self.find_by_id(node['id']) is not None:
             node['awareness_nodes'].append(self.find_by_id(node['id']))
-        try:
+        if self.parent_nodes(node['id']) is not None:
             node['awareness_nodes'].append(self.parent_nodes(node['id']))
-        except TypeError:
-            pass
-        node['previous_instance'] = self.encrypt(str(self.find_by_id(node['id']))) if self.find_by_id(node['id']) != None else None
+        node['previous_instance'] = self.encrypt(str(self.find_by_id(node['id']))) if self.find_by_id(node['id']) != None else 'genesis'
         self.NODES.append(node)
 
     def update_node(self, data: dict):
