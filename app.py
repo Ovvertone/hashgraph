@@ -12,6 +12,8 @@ app.config['SECRET_KEY'] = ''
 
 graph = Hashgraph()
 
+exp_token = datetime.datetime.now() + datetime.timedelta(hours=24)
+
 
 def token_required(f):
     @wraps(f)
@@ -25,9 +27,6 @@ def token_required(f):
             return Response(json.dumps({'message': 'Token is invalid'}), 403)
         return f(*args, **kwargs)
     return decorated
-
-
-exp_token = datetime.datetime.now() + datetime.timedelta(hours=24)
 
 
 @app.route('/register', methods=['POST'])
