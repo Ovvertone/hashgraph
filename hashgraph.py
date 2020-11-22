@@ -10,7 +10,7 @@ class Hashgraph:
     def __init__(self):
         pass
 
-    def create_node(self, data: dict):
+    def create_node(self, data: dict) -> None:
         node = {
             'id': self.encrypt(str(random() * time())),
             'timestamp': self.encrypt(str(time())),
@@ -19,47 +19,55 @@ class Hashgraph:
         }
         if self.find_by_id(node['id']) is not None:
             node['awareness_nodes'].append(self.find_by_id(node['id']))
-        if self.parent_nodes(node['id']) is not None:
-            node['awareness_nodes'].append(self.parent_nodes(node['id']))
+        if self.find_parent_node(node['id']) is not None:
+            node['awareness_nodes'].append(self.find_parent_node(node['id']))
         node['previous_instance'] = self.encrypt(str(self.find_by_id(node['id']))) if self.find_by_id(node['id']) != None else 'genesis'
+        if len(node['awareness_nodes']) != 0:
+            self.aware_nodes(node['awareness_nodes'][-1], node['id'])
         self.NODES.append(node)
 
-    def update_node(self, data: dict):
+    def update_node(self, data: dict) -> None:
         node = {
             'id': data['id'],
             'timestamp': self.encrypt(str(time())),
             'transaction': self.encrypt(data['login'] + data['password']),
             'awareness_nodes': [],
         }
-        if self.find_by_id(node['id']) is not None:
-            node['awareness_nodes'].append(self.find_by_id(node['id'])['id'])
-        node['awareness_nodes'].append(self.parent_nodes(node['id']))
-        node['previous_instance'] = self.encrypt(str(self.find_by_id(node['id']))) if self.find_by_id(node['id']) is not None else None
+        node['awareness_nodes'].append(self.find_by_id(node['id'])['id'])
+        if self.find_parent_node(node['id']) is not None:
+            node['awareness_nodes'].append(self.find_parent_node(node['id']))
+        node['previous_instance'] = self.encrypt(str(self.find_by_id(node['id'])))
+        if len(node['awareness_nodes']) != 1:
+            self.aware_nodes(node['awareness_nodes'][-1], node['id'])
         self.NODES.append(node)
 
     @staticmethod
     def encrypt(value: str) -> str:
         return hashlib.md5(value.encode()).hexdigest()
 
-    def parent_nodes(self, parent_id: str) -> str:
+    def find_parent_node(self, parent_id: str) -> str:
         if len(self.NODES) == 0 or len(self.get_unique_users()) < 2:
             return None
-        awareness_node = choice(self.NODES)
-        while awareness_node['id'] == parent_id:
-            awareness_node = choice(self.NODES)
-        return awareness_node['id']
+        parent_node = choice(self.NODES)
+        while parent_node['id'] == parent_id:
+            parent_node = choice(self.NODES)
+        return parent_node['id']
 
-    def aware_nodes(self, node: dict):
-        pass
+    def aware_nodes(self, parent_node_id: str, new_node_id: str) -> None:
+        aware_node = self.find_by_id(parent_node_id)
+        aware_node['awareness_nodes'].append(new_node_id)
+        count_nodes = len(aware_node['awareness_nodes'])
+        if count_nodes != 1:
+            [self.aware_nodes(aware_node['awareness_nodes'][id_], new_node_id) for id_ in range(-2, 0, -1) if id_ != new_node_id]
 
     def get_unique_users(self) -> list:
         unique_users = []
         [unique_users.append(node) for node in self.NODES if node not in unique_users]
         return unique_users
 
-    def find_by_id(self, id: str) -> str:
+    def find_by_id(self, id_: str) -> dict:
         for node in reversed(self.NODES):
-            if node['id'] == id:
+            if node['id'] == id_:
                 return node
 
     @property
