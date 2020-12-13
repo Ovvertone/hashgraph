@@ -1,49 +1,67 @@
-import datetime
-from functools import wraps
-import json
+from random import choice
+from time import time
 
-from flask import Flask, request, Response
-import jwt
+import hashlib
 
-from hashgraph import Hashgraph
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = ''
+class Hashgraph:
+    NODES = []
+
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def encrypt(value: str) -> str:
+        return hashlib.md5(value.encode()).hexdigest()
+
+    def create_node(self, data: dict) -> None:
+        self.NODES.append({
+            'timestamp': self.encrypt(str(time())),
+            'transaction': self.encrypt(data['login'] + data['password']),
+            'parent_node': None,
+            'awareness_node': None if len(self.NODES) == 0 else self.encrypt(choice(str(self.NODES))),
+        })
+
+    def update_node(self, old_data: dict, new_data: dict) -> None:
+        old_transaction = self.encrypt(old_data['login'] + old_data['password'])
+        while awareness_node := choice(self.NODES)['transaction'] == old_transaction:
+            continue
+        node = {
+            'timestamp': self.encrypt(str(time())),
+            'transaction': self.encrypt(new_data['login'] + new_data['password']),
+            'parent_node': self.encrypt(str(self.find_by_transaction(old_transaction))),
+            'awareness_node': self.encrypt(str(awareness_node)),
+        }
+        self.NODES.append(node)
+
+    def find_by_transaction(self, transaction: str) -> dict:
+        for node in reversed(self.NODES):
+            if node['transaction'] == transaction:
+                return node
+
+    def get_unique_users(self) -> list:
+        unique_users = []
+        [unique_users.append(node) for node in self.NODES if node not in unique_users]
+        return unique_users
+
+    @property
+    def get_last_node(self) -> dict:
+        return self.NODES[-1]
+
+    def find_user(self, login: str, password: str) -> bool:
+        hashed_logpass = self.encrypt(login + password)
+        for node in self.NODES:
+            if node['transaction'] == hashed_logpass:
+                return True
+        return False
+
 
 graph = Hashgraph()
+graph.create_node({'login': 'Sasha', 'password': 'JavaMan'})
+graph.create_node({'login': 'Egor', 'password': '2223404'})
+graph.create_node({'login': 'Slava', 'password': 'PITON-GOVNO'})
+graph.create_node({'login': 'Qwerty', 'password': '123456'})
+graph.create_node({'login': 'John Doe', 'password': '112233'})
 
-exp_token = datetime.datetime.now() + datetime.timedelta(hours=24)
-
-
-def token_required(f):
-    @wraps(f)
-    def decorated(*args, **kwargs):
-        token = request.headers.get('token')
-        if not token:
-            return Response(json.dumps({'message': 'Token is missing!'}), 403)
-        try:
-            jwt.decode(token, app.config['SECRET_KEY'])
-        except Exception:
-            return Response(json.dumps({'message': 'Token is invalid'}), 403)
-        return f(*args, **kwargs)
-    return decorated
-
-
-@app.route('/register', methods=['POST'])
-def register():
-    graph.create_node({'login': request.form.get('login'), 'password': request.form.get('password')})
-    res = graph.get_last_node
-    return Response(json.dumps(res, indent=4), 200)
-
-
-@app.route('/login', methods=['POST'])
-def login():
-    if graph.find_user(request.form.get('login'), request.form.get('password')):
-        token = jwt.encode({'user': request.form.get('login'), 'exp': exp_token}, app.config['SECRET_KEY'])
-        print(token)
-        return Response(json.dumps({'token': token.decode('UTF-8')}))
-    return Response('Could not verify!', 401)
-
-
-if __name__ == '__main__':
-    app.run()
+graph.update_node({'login': 'Qwerty', 'password': '123456'}, {'login': 'Ivan', 'password': '321123321'})
+[print(i) for i in graph.NODES]
