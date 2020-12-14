@@ -3,6 +3,7 @@ from time import time
 
 import hashlib
 
+
 class Hashgraph:
     NODES = []
 
@@ -19,18 +20,19 @@ class Hashgraph:
             'transaction': self.encrypt(data['login'] + data['password']),
             'parent_node': None,
             'awareness_node': None if len(self.NODES) == 0 else self.encrypt(choice(str(self.NODES))),
-            })
+        })
 
     def update_node(self, old_data: dict, new_data: dict) -> None:
         old_transaction = self.encrypt(old_data['login'] + old_data['password'])
         while awareness_node := choice(self.NODES)['transaction'] == old_transaction:
             continue
-        self.NODES.append({
+        node = {
             'timestamp': self.encrypt(str(time())),
             'transaction': self.encrypt(new_data['login'] + new_data['password']),
             'parent_node': self.encrypt(str(self.find_by_transaction(old_transaction))),
             'awareness_node': self.encrypt(str(awareness_node)),
-            })
+        }
+        self.NODES.append(node)
 
     def find_by_transaction(self, transaction: str) -> dict:
         for node in reversed(self.NODES):
@@ -52,6 +54,7 @@ class Hashgraph:
             if node['transaction'] == hashed_logpass:
                 return True
         return False
+
 
 graph = Hashgraph()
 graph.create_node({'login': 'Sasha', 'password': 'JavaMan'})
